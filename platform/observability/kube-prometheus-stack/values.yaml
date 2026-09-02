@@ -64,6 +64,18 @@ prometheusOperator:
   resources:
     requests: { cpu: 20m, memory: 64Mi }
     limits: { memory: 200Mi }
+  # Run the admission-webhook cert-gen as ArgoCD PreSync hooks so ArgoCD does not
+  # track the (self-deleting) Jobs as permanent drift.
+  admissionWebhooks:
+    annotations:
+      argocd.argoproj.io/hook: PreSync
+      argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    mutatingWebhookConfiguration:
+      annotations:
+        argocd.argoproj.io/hook: PreSync
+    validatingWebhookConfiguration:
+      annotations:
+        argocd.argoproj.io/hook: PreSync
 
 kube-state-metrics:
   resources:

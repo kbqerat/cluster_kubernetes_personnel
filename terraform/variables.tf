@@ -23,7 +23,7 @@ variable "server_cpus" {
 
 variable "server_memory" {
   type    = string
-  default = "2GiB"
+  default = "4GiB"
 }
 
 variable "server_disk" {
@@ -45,7 +45,7 @@ variable "agent_cpus" {
 
 variable "agent_memory" {
   type    = string
-  default = "2GiB"
+  default = "3GiB"
 }
 
 variable "agent_disk" {
