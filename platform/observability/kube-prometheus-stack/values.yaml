@@ -88,14 +88,21 @@ prometheus-node-exporter:
     limits: { memory: 64Mi }
 
 grafana:
-  # Default login admin / prom-operator — change it (see docs/runbook.md).
+  # Admin creds from a Secret we own (created out-of-band, not in Git):
+  #   kubectl -n observability create secret generic grafana-admin \
+  #     --from-literal=admin-user=admin --from-literal=admin-password=<pw>
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
   defaultDashboardsTimezone: browser
   resources:
-    requests: { cpu: 20m, memory: 96Mi }
-    limits: { memory: 256Mi }
+    requests: { cpu: 20m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  # Stateless: every dashboard + datasource is provisioned from ConfigMaps via
+  # GitOps, so a PVC only creates drift (stale admin password, etc.).
   persistence:
-    enabled: true
-    size: 2Gi
+    enabled: false
   grafana.ini:
     server:
       root_url: https://grafana.192-168-252-240.sslip.io

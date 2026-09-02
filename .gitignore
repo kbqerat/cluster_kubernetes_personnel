@@ -32,3 +32,4 @@ age.key
 
 # local dashboard credential
 .dashboard-auth-password.txt
+.grafana-admin-password.txt
