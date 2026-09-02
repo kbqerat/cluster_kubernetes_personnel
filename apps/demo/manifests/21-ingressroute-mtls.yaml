@@ -1,0 +1,22 @@
+# mTLS route — Traefik rejects the connection unless the client presents a
+# certificate signed by the homelab CA (TLSOption "mtls" in the traefik ns).
+#   make demo-client-cert     # writes ./demo-client.{crt,key} + ./homelab-ca.crt
+#   curl --cacert homelab-ca.crt --cert demo-client.crt --key demo-client.key \
+#        https://whoami-mtls.192-168-252-240.sslip.io
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami-mtls
+  namespace: demo
+spec:
+  entryPoints: ["websecure"]
+  routes:
+    - match: Host(`whoami-mtls.192-168-252-240.sslip.io`)
+      kind: Rule
+      services:
+        - name: whoami
+          port: 80
+  tls:
+    options:
+      name: mtls
+      namespace: traefik

@@ -1,0 +1,67 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-rules
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab.nodes
+      rules:
+        - alert: HomelabNodeMemoryPressure
+          expr: |
+            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.90
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} memory > 90%"
+            description: "Available memory on {{ $labels.instance }} has been below 10% for 10 minutes. The 16 GB host is oversubscribed — scale a workload down or bump agent_memory."
+        - alert: HomelabNodeDiskLow
+          expr: |
+            (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay",mountpoint="/"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay",mountpoint="/"}) < 0.15
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} root disk < 15% free"
+            description: "{{ $labels.instance }} root filesystem is nearly full."
+        - alert: HomelabNodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.node }} is NotReady"
+            description: "{{ $labels.node }} has been NotReady for 5 minutes."
+    - name: homelab.workloads
+      rules:
+        - alert: HomelabPodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash-looping"
+            description: "More than 3 restarts in 15 minutes."
+        - alert: HomelabPVCAlmostFull
+          expr: |
+            (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) < 0.15
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} < 15% free"
+            description: "Prometheus/Loki/Grafana volume filling up — lower retention or grow the PVC."
+    - name: homelab.observability
+      rules:
+        - alert: HomelabScrapeTargetDown
+          expr: up{job!~"kube-state-metrics|node-exporter"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Prometheus target {{ $labels.job }} down"
+            description: "{{ $labels.job }} on {{ $labels.instance }} has been unreachable for 10 minutes."

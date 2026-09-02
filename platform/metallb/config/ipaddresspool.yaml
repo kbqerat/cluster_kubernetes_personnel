@@ -1,0 +1,13 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: homelab-pool
+  namespace: metallb-system
+spec:
+  # Slice of the Multipass bridge subnet (192.168.252.0/24) that Multipass's
+  # own DHCP will not hand out for a fixed 3-node cluster. Traefik pins .240
+  # (see platform/traefik/values.yaml).
+  addresses:
+    - 192.168.252.240-192.168.252.250
+  autoAssign: true
+  avoidBuggyIPs: true

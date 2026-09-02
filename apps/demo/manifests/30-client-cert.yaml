@@ -1,0 +1,23 @@
+# A client certificate for testing the mTLS route, signed by the homelab CA.
+# Lands in secret demo/demo-client-cert (tls.crt / tls.key / ca.crt).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: demo-client
+  namespace: demo
+spec:
+  secretName: demo-client-cert
+  duration: 2160h
+  renewBefore: 360h
+  commonName: demo-client
+  subject:
+    organizations: ["homelab"]
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: homelab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io

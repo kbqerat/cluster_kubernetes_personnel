@@ -1,0 +1,21 @@
+# The homelab root CA. Its key/cert land in secret cert-manager/homelab-root-ca,
+# which the "homelab-ca" ClusterIssuer then uses to sign all leaf certs.
+# Trust cert-manager/homelab-root-ca's tls.crt on your Mac:  make trust-ca
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: Homelab Root CA
+  secretName: homelab-root-ca
+  duration: 87600h    # 10 years
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io

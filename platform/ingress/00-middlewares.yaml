@@ -1,0 +1,29 @@
+# Basic-auth gate for the dashboards that have no auth of their own
+# (Traefik dashboard, Prometheus, Alertmanager).
+# Create the secret it references:
+#   htpasswd -nbBC 10 admin '<password>' > /tmp/u && \
+#   kubectl -n traefik create secret generic dashboard-auth --from-file=users=/tmp/u
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: basic-auth
+  namespace: traefik
+spec:
+  basicAuth:
+    secret: dashboard-auth
+    removeHeader: true
+---
+# HTTPS is already enforced globally (web -> websecure redirect in Traefik
+# values); this adds HSTS + common hardening headers.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: traefik
+spec:
+  headers:
+    stsSeconds: 31536000
+    stsIncludeSubdomains: true
+    contentTypeNosniff: true
+    browserXssFilter: true
+    referrerPolicy: same-origin

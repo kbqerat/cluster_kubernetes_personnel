@@ -1,0 +1,31 @@
+# --- Terraform ---
+terraform/.terraform/
+terraform/.generated/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# keep example tfvars, ignore real ones
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# --- Kubeconfig / cluster access ---
+kubeconfig
+*.kubeconfig
+.kube/
+
+# --- Secrets ---
+.env
+*.decrypted.yaml
+*.dec.yaml
+age.key
+*.agekey
+
+# --- OS / editor ---
+.DS_Store
+*.swp

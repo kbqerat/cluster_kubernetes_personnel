@@ -1,0 +1,53 @@
+# traefik/traefik chart values (chart 41.x / Traefik v3.7)
+deployment:
+  replicas: 1
+
+service:
+  type: LoadBalancer
+  annotations:
+    # Pin the LB VIP so *.192-168-252-240.sslip.io is deterministic.
+    metallb.universe.tf/loadBalancerIPs: 192.168.252.240
+
+ports:
+  web:
+    # Redirect all plain HTTP to HTTPS.
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  # websecure already has http.tls.enabled: true by default in this chart.
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+  kubernetesIngress:
+    enabled: true
+    publishedService:
+      enabled: true
+
+# We ship our own dashboard IngressRoute (with basic-auth) in platform/ingress.
+ingressRoute:
+  dashboard:
+    enabled: false
+
+log:
+  level: INFO
+accessLog:
+  enabled: true
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    # ServiceMonitor is created separately once the Prometheus CRDs exist
+    # (platform/observability/extras/servicemonitors.yaml).
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: false
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { memory: 192Mi }

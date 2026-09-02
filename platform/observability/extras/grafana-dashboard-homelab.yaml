@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-homelab
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Homelab"
+data:
+  homelab-overview.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "graphTooltip": 1,
+      "time": { "from": "now-6h", "to": "now" },
+      "timezone": "browser",
+      "title": "Homelab / Cluster Overview",
+      "uid": "homelab-overview",
+      "version": 1,
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Nodes Ready",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 3 } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Running Pods",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(kube_pod_status_phase{phase=\"Running\"})", "refId": "A" }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Pods Pending",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(kube_pod_status_phase{phase=\"Pending\"})", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } } }
+        },
+        {
+          "type": "stat",
+          "title": "Firing Alerts",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(ALERTS{alertstate=\"firing\",alertname!=\"Watchdog\"})", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } }
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU cores in use by node",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum by (instance) (rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]))", "legendFormat": "{{instance}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory used % by node",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "percent", "max": 100 } },
+          "targets": [
+            { "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)", "legendFormat": "{{instance}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Log lines / sec by namespace",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            { "expr": "sum by (namespace) (rate(({namespace=~\".+\"})[5m]))", "refId": "A" }
+          ]
+        }
+      ]
+    }

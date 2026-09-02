@@ -1,0 +1,114 @@
+# prometheus-community/kube-prometheus-stack — tuned for a 3x2GiB k3s homelab.
+crds:
+  enabled: true
+
+# --- k3s runs the control plane inside a single process; these are not
+#     separately scrapable, so drop the ServiceMonitors to avoid "target down".
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+defaultRules:
+  create: true
+  rules:
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeProxy: false
+    etcd: false
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    retention: 72h
+    resources:
+      requests: { cpu: 10m, memory: 32Mi }
+      limits: { memory: 96Mi }
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+
+prometheus:
+  prometheusSpec:
+    replicas: 1
+    retention: 2d
+    retentionSize: "2GB"
+    walCompression: true
+    scrapeInterval: 45s
+    # Pick up ServiceMonitors / PrometheusRules from any namespace, not just
+    # those with the Helm release label.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits: { memory: 900Mi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+prometheusOperator:
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits: { memory: 200Mi }
+
+kube-state-metrics:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 10m, memory: 24Mi }
+    limits: { memory: 64Mi }
+
+grafana:
+  # Default login admin / prom-operator — change it (see docs/runbook.md).
+  defaultDashboardsTimezone: browser
+  resources:
+    requests: { cpu: 20m, memory: 96Mi }
+    limits: { memory: 256Mi }
+  persistence:
+    enabled: true
+    size: 2Gi
+  grafana.ini:
+    server:
+      root_url: https://grafana.192-168-252-240.sslip.io
+      serve_from_sub_path: false
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+      label: grafana_dashboard
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      searchNamespace: ALL
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki.observability.svc.cluster.local:3100
+      jsonData:
+        maxLines: 1000
+  # Exposed via Traefik IngressRoute (platform/ingress), not the chart Ingress.
+  ingress:
+    enabled: false

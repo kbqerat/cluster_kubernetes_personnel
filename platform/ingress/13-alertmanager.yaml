@@ -1,0 +1,21 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: alertmanager
+  namespace: traefik
+spec:
+  entryPoints: ["websecure"]
+  routes:
+    - match: Host(`alertmanager.192-168-252-240.sslip.io`)
+      kind: Rule
+      middlewares:
+        - name: basic-auth
+        - name: security-headers
+      services:
+        - name: kube-prometheus-stack-alertmanager
+          namespace: observability
+          port: 9093
+  tls:
+    options:
+      name: default
+      namespace: traefik

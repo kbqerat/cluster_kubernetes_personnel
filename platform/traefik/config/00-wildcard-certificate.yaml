@@ -1,0 +1,22 @@
+# Wildcard leaf cert for every homelab hostname, signed by the homelab CA.
+# Lands in secret traefik/wildcard-sslip-tls, served by Traefik as the default
+# cert (see 01-tlsstore.yaml).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-sslip
+  namespace: traefik
+spec:
+  secretName: wildcard-sslip-tls
+  duration: 2160h      # 90d
+  renewBefore: 360h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    - "192-168-252-240.sslip.io"
+    - "*.192-168-252-240.sslip.io"
+  issuerRef:
+    name: homelab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io

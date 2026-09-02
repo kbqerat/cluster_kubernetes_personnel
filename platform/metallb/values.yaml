@@ -1,0 +1,12 @@
+# metallb/metallb chart values
+controller:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { memory: 128Mi }
+speaker:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { memory: 128Mi }
+  # L2 mode only; no BGP in a homelab.
+  frr:
+    enabled: false

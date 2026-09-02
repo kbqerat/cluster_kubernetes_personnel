@@ -1,0 +1,25 @@
+# Sane TLS floor for every route.
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: default
+  namespace: traefik
+spec:
+  minVersion: VersionTLS12
+  sniStrict: false
+---
+# Referenced by the mTLS demo route (apps/demo). Requires the client to present
+# a cert signed by the homelab CA. The wildcard-sslip-tls secret already carries
+# the issuing CA under ca.crt (cert-manager always includes it), which Traefik
+# accepts for clientAuth.
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: mtls
+  namespace: traefik
+spec:
+  minVersion: VersionTLS12
+  clientAuth:
+    clientAuthType: RequireAndVerifyClientCert
+    secretNames:
+      - wildcard-sslip-tls

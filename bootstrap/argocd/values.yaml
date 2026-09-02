@@ -1,0 +1,47 @@
+# argo/argo-cd Helm values — used both for the one-time bootstrap install
+# (bootstrap/install.sh) and by ArgoCD to self-manage afterwards
+# (platform app "10-argocd"). Keep the two in sync = this one file.
+
+global:
+  domain: argocd.192-168-252-240.sslip.io
+
+crds:
+  install: true
+  keep: true
+
+configs:
+  params:
+    # TLS is terminated at Traefik; run the API/UI server plain-HTTP behind it.
+    server.insecure: "true"
+  cm:
+    timeout.reconciliation: 120s
+    # sslip.io hostnames are fine as-is; nothing custom needed here.
+  rbac:
+    policy.default: role:readonly
+
+dex:
+  enabled: false
+notifications:
+  enabled: false
+
+# Resource footprint tuned for a 3x2GiB k3s homelab.
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 768Mi }
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+server:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 256Mi }
+applicationSet:
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits: { memory: 128Mi }
+redis:
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits: { memory: 128Mi }
