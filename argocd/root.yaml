@@ -8,8 +8,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: __GITOPS_REPO_URL__
-    targetRevision: __GITOPS_REVISION__
+    repoURL: https://github.com/kbqerat/cluster_kubernetes_personnel.git
+    targetRevision: main
     path: argocd/apps
     directory:
       recurse: false

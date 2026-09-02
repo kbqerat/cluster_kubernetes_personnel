@@ -16,8 +16,8 @@ spec:
       helm:
         valueFiles:
           - $values/platform/traefik/values.yaml
-    - repoURL: __GITOPS_REPO_URL__
-      targetRevision: __GITOPS_REVISION__
+    - repoURL: https://github.com/kbqerat/cluster_kubernetes_personnel.git
+      targetRevision: main
       ref: values
   destination:
     server: https://kubernetes.default.svc

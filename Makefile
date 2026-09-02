@@ -39,8 +39,8 @@ ssh: ## Shell into a node: make ssh NODE=k3s-agent-1
 
 ## --- Phase 4+: GitOps -------------------------------------------------------
 
-set-repo: ## Point manifests at your Git remote: make set-repo URL=https://github.com/you/repo.git
-	./scripts/set-repo.sh $(URL) $(or $(REV),main)
+set-repo: ## Bake your Git remote into the ArgoCD manifests (defaults to 'origin' + main)
+	./scripts/set-repo.sh $(URL) $(REV)
 
 argocd-bootstrap: ## Install ArgoCD + apply the root app-of-apps
 	./bootstrap/install.sh

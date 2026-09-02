@@ -16,8 +16,12 @@ fi
 case "$URL" in
   git@github.com:*) URL="https://github.com/${URL#git@github.com:}" ;;
 esac
+case "$URL" in
+  http://*|https://*|ssh://*|git://*) ;;
+  *) echo "refusing: '$URL' is not a git URL (did you run 'make set-repo' with no URL=?)" >&2; exit 1 ;;
+esac
 
-files="$(grep -rl -e '__GITOPS_REPO_URL__' -e '__GITOPS_REVISION__' argocd platform apps bootstrap 2>/dev/null || true)"
+files="$(grep -rl -e '__GITOPS_REPO_URL__' -e '__GITOPS_REVISION__' argocd platform apps 2>/dev/null || true)"
 if [ -z "$files" ]; then
   echo "No placeholders left — already set."
   exit 0
