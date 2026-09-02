@@ -16,8 +16,9 @@ DNS via **Cloudflare** (or `sslip.io` while free), and observability with
 | DNS          | `sslip.io` wildcard now → Cloudflare later                      |
 | TLS/mTLS     | cert-manager self-signed root CA now → Let's Encrypt DNS-01 later |
 
-Default node size: 2 vCPU / 2 GiB / 12 GiB disk. Tune in `terraform/variables.tf`
-or via `-var` (16 GB Mac: keep total VM memory ≤ ~7 GiB).
+Default node size: server 2 vCPU / **4 GiB**, agents 2 vCPU / **3 GiB**, 12 GiB
+disk (10 GiB total RAM — the full observability stack OOM-kills the API server at
+3×2 GiB). Tune in `terraform/variables.tf`.
 
 ## Prerequisites
 
@@ -46,18 +47,19 @@ Tear down: `make down` (VMs) or `make clean` (VMs + local artifacts).
 ## Quickstart — Phase 4+ (GitOps)
 
 ```bash
-gh repo create cluster_kubernetes_personnel --private --source=. --remote=origin --push
+gh repo create cluster_kubernetes_personnel --public --source=. --remote=origin --push
 make set-repo                       # bake your repo URL into the ArgoCD manifests
 git commit -am "set gitops repo url" && git push
+# create the dashboard-auth + grafana-admin secrets (see docs/runbook.md step 3)
 make argocd-bootstrap               # helm install argocd + apply root app-of-apps
-watch make apps                     # all Applications -> Synced / Healthy (~5-10 min)
+watch make apps                     # all 14 Applications -> Synced / Healthy (~8-12 min)
 make trust-ca                       # trust the homelab root CA on macOS
 make urls                           # ArgoCD / Grafana / Prometheus / whoami URLs
 ```
 
-Everything after `argocd-bootstrap` is driven by `git push`. Full details and
-failure modes in [docs/runbook.md](docs/runbook.md); design in
-[docs/architecture.md](docs/architecture.md).
+The repo must be **public** (or give ArgoCD repo credentials). Everything after
+`argocd-bootstrap` is driven by `git push`. Full details and failure modes in
+[docs/runbook.md](docs/runbook.md); design in [docs/architecture.md](docs/architecture.md).
 
 ## Roadmap
 
@@ -75,9 +77,9 @@ failure modes in [docs/runbook.md](docs/runbook.md); design in
 | 9 | Demo app (whoami) delivered purely via Git push | ✅ |
 | 10 | Cloudflare + Let's Encrypt DNS-01 (committed, dormant) | ◑ needs a domain |
 
-All manifests are authored and chart-validated. What remains is *running* it:
-`make up && make k3s && make argocd-bootstrap` on a Mac with Local Network
-permission granted to the terminal app (see runbook).
+Running end to end on a 16 GB M-series Mac: 14/14 ArgoCD apps Synced/Healthy,
+Traefik LB on `192.168.252.240`, wildcard + mTLS certs from the Homelab CA,
+29/29 Prometheus targets up, Loki ingesting logs from every namespace via Alloy.
 
 ## Layout
 

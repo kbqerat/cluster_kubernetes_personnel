@@ -75,8 +75,9 @@ is Synced + Healthy, which is what serializes "CRDs before CRs".
 - **Self-signed CA, not Let's Encrypt** — works offline and with `sslip.io`, and
   exercises the full chain (root CA → leaf → trust store) plus mTLS. The
   `letsencrypt-staging` / `letsencrypt-prod` ClusterIssuers with the Cloudflare
-  DNS-01 solver are committed but dormant; wiring a real domain is a token + a
-  zone name.
+  DNS-01 solver are committed as `*.clusterissuer.example.yaml` (excluded from
+  sync so they don't sit `Degraded` without a token); activating them is a
+  `git mv`, a zone name, and a Cloudflare API token.
 - **Loki single-binary / filesystem** — the microservice/object-store layout wants
   several GB of RAM the 16 GB host doesn't have.
 - **Everything after ArgoCD is `git push`** — `bootstrap/` is the only imperative step.

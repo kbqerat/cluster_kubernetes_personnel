@@ -12,22 +12,38 @@ make k3s                      # k3sup installs k3s, writes ./kubeconfig
 export KUBECONFIG=$PWD/kubeconfig
 make nodes                    # 3x Ready
 
-# 2. GitHub repo (once)
-gh repo create cluster_kubernetes_personnel --private --source=. --remote=origin --push
-make set-repo                 # rewrites __GITOPS_REPO_URL__ from 'origin', commit the result
-git add -A && git commit -m "set gitops repo url" && git push
+# 2. GitHub repo (once) — MUST be public, or ArgoCD needs repo creds
+gh repo create cluster_kubernetes_personnel --public --source=. --remote=origin --push
+make set-repo                 # bakes 'origin' into the 15 Application manifests
+git commit -am "set gitops repo url" && git push
 
-# 3. GitOps
+# 3. Dashboard basic-auth secret (Prometheus/Alertmanager/Traefik) + Grafana admin
+kubectl create namespace traefik --dry-run=client -o yaml | kubectl apply -f -
+htpasswd -nbBC 10 admin 'CHOOSE_ONE' | kubectl -n traefik create secret generic dashboard-auth --from-file=users=/dev/stdin
+kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n observability create secret generic grafana-admin \
+  --from-literal=admin-user=admin --from-literal=admin-password='CHOOSE_ANOTHER'
+
+# 4. GitOps
 make argocd-bootstrap         # helm install argocd + apply root app-of-apps
-watch make apps               # wait for all Applications = Synced / Healthy
+watch make apps               # wait for all 14 Applications = Synced / Healthy
 
-# 4. Trust the homelab CA + see the endpoints
+# 5. Trust the homelab CA + see the endpoints
 make trust-ca
 make urls
 ```
 
-First full sync is ~5–10 min (CRDs, cert-manager webhook, Prometheus operator,
-Loki PVC).
+First full sync is ~8–12 min (CRDs, cert-manager webhook, Prometheus operator,
+Loki + Prometheus PVCs). The app-of-apps advances by sync-wave; a wave that is
+briefly `Degraded`/`Missing` while a CRD lands is normal — ArgoCD retries.
+
+## Credentials
+
+| What | User | Where the password lives |
+|------|------|--------------------------|
+| ArgoCD UI/CLI | `admin` | `make argocd-password` (secret `argocd/argocd-initial-admin-secret`) |
+| Grafana | `admin` | secret `observability/grafana-admin` (you created it in step 3) |
+| Prometheus / Alertmanager / Traefik dashboards | `admin` | secret `traefik/dashboard-auth` (htpasswd, step 3) |
 
 ## Daily use
 
@@ -89,19 +105,45 @@ Multipass DHCP race on parallel `multipass launch`. `make up` already forces
 `terraform apply -parallelism=1`; `scripts/provision-k3s.sh` refuses to continue
 on a duplicate. Fix: `make down && make up`.
 
-### Pods stuck `Pending` (Insufficient memory)
+### k3s API server unreachable, `load average` in the 30s, pods evicted
 
-3×2 GiB is tight with the full observability stack. Give the agents more:
+The **server node ran out of RAM**. 3×2 GiB cannot hold the control plane +
+kube-prometheus-stack + Loki + Alloy + ArgoCD. Defaults are now **server 4 GiB /
+agents 3 GiB** (`terraform/variables.tf`). To resize VMs that already exist
+(the `multipass` provider treats `memory` as ForceNew, so `terraform apply`
+would destroy them):
 
 ```bash
-cd terraform && terraform apply -parallelism=1 \
-  -var "ssh_public_key=$(cat ~/.ssh/id_ed25519.pub)" \
-  -var 'agent_memory=3GiB'
-# then: multipass restart --all  (memory change needs a VM restart)
+multipass stop --all
+multipass set local.k3s-server.memory=4G
+multipass set local.k3s-agent-1.memory=3G
+multipass set local.k3s-agent-2.memory=3G
+multipass start k3s-server        # wait for it, then:
+multipass start k3s-agent-1 k3s-agent-2
 ```
 
-Or trim: lower `prometheus.prometheusSpec.retention`, or scale `alloy` to a
-smaller `resources.requests`.
+Steady-state after that: server ~62%, agents ~50% of RAM.
+
+---
+
+## Gotchas hit during first bring-up (all fixed in the manifests)
+
+- **Private repo** → ArgoCD `authentication required: Repository not found`.
+  The repo must be public, or add an ArgoCD repository Secret with a token.
+- **`TLSOption` named `default`** is special-cased by Traefik (applied globally,
+  not addressable). IngressRoutes must use `tls: {}` and let it apply implicitly;
+  only non-`default` options (like `mtls`) can be referenced by name/namespace.
+- **Grafana + a PVC** persists the admin password from first boot and ignores
+  later Secret changes. Grafana is now `persistence.enabled: false` (all state is
+  provisioned from ConfigMaps) with `admin.existingSecret: grafana-admin`.
+- **Dormant Let's Encrypt ClusterIssuers** report `Ready=False` without a
+  Cloudflare token and drag `cert-manager-issuers` to `Degraded`. They live as
+  `*.clusterissuer.example.yaml` (excluded from sync) until you have a domain.
+- **kube-prometheus-stack admission-webhook Jobs** self-delete; ArgoCD tracked
+  them as drift until given `argocd.argoproj.io/hook: PreSync` annotations
+  (`prometheusOperator.admissionWebhooks.annotations` in values).
+- **`mapfile`** (bash 4) is not in macOS's bash 3.2 — `scripts/provision-k3s.sh`
+  uses a portable `for` loop.
 
 ---
 
@@ -110,7 +152,8 @@ smaller `resources.requests`.
 1. Get a domain, set its nameservers to Cloudflare.
 2. Cloudflare → My Profile → API Tokens → token with `Zone:DNS:Edit` + `Zone:Zone:Read` for that zone.
 3. `kubectl -n cert-manager create secret generic cloudflare-api-token --from-literal=api-token='<TOKEN>'`
-4. Edit `platform/cert-manager/issuers/1?-letsencrypt-*.yaml`: replace `example.com` with your zone.
+4. `git mv` the two `platform/cert-manager/issuers/1?-letsencrypt-*.clusterissuer.example.yaml`
+   to drop `.example`, and replace `example.com` in them with your Cloudflare zone.
 5. Point hostnames at the new domain (search-replace `192-168-252-240.sslip.io`),
    and change the wildcard `Certificate` / IngressRoutes' `issuerRef` to
    `letsencrypt-staging`, verify, then `letsencrypt-prod`.
