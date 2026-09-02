@@ -29,3 +29,6 @@ age.key
 # --- OS / editor ---
 .DS_Store
 *.swp
+
+# local dashboard credential
+.dashboard-auth-password.txt

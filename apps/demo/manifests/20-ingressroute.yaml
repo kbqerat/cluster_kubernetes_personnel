@@ -12,7 +12,4 @@ spec:
       services:
         - name: whoami
           port: 80
-  tls:
-    options:
-      name: default
-      namespace: traefik
+  tls: {}

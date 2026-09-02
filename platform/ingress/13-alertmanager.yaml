@@ -15,7 +15,4 @@ spec:
         - name: kube-prometheus-stack-alertmanager
           namespace: observability
           port: 9093
-  tls:
-    options:
-      name: default
-      namespace: traefik
+  tls: {}
